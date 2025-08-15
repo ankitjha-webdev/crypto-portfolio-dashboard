@@ -13,3 +13,4 @@ export {
   SkeletonTable,
   SkeletonCryptoTable 
 } from './SkeletonLoader';
+export { default as DeleteModal } from './DeleteModal';

@@ -10,7 +10,7 @@ import {
   updatePortfolioCalculations
 } from '../store/slices/portfolioSlice';
 import { fetchCoins, selectAllCoins, selectCryptoLoading, selectCryptoError } from '../store/slices/cryptoSlice';
-import { ErrorBoundary, ErrorDisplay, LoadingSpinner } from '../components/common';
+import { ErrorBoundary, ErrorDisplay, LoadingSpinner, DeleteModal } from '../components/common';
 import { useToast } from '../components/common/ToastContainer';
 
 interface HoldingFormData {
@@ -35,6 +35,17 @@ const Portfolio: React.FC = () => {
     coinId: '',
     amount: '',
     averageBuyPrice: '',
+  });
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    coinId: string | null;
+    coinName: string;
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    coinId: null,
+    coinName: '',
+    isLoading: false,
   });
 
   useEffect(() => {
@@ -113,16 +124,43 @@ const Portfolio: React.FC = () => {
     setShowAddForm(true);
   }, []);
 
-  const handleDeleteHolding = useCallback((coinId: string) => {
-    if (confirm('Are you sure you want to remove this holding?')) {
-      try {
-        dispatch(removeHolding(coinId));
-      } catch (error) {
-        console.error('Error removing holding', error);
-        showError('Delete Error', 'Failed to remove holding. Please try again.');
-      }
+  const handleDeleteHolding = useCallback((coinId: string, coinName: string) => {
+    setDeleteModal({
+      isOpen: true,
+      coinId,
+      coinName,
+      isLoading: false,
+    });
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteModal.coinId) return;
+
+    setDeleteModal(prev => ({ ...prev, isLoading: true }));
+
+    try {
+      dispatch(removeHolding(deleteModal.coinId));
+      setDeleteModal({
+        isOpen: false,
+        coinId: null,
+        coinName: '',
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('Error removing holding', error);
+      showError('Delete Error', 'Failed to remove holding. Please try again.');
+      setDeleteModal(prev => ({ ...prev, isLoading: false }));
     }
-  }, [dispatch, showError]);
+  }, [deleteModal.coinId, dispatch, showError]);
+
+  const handleCloseDeleteModal = useCallback(() => {
+    setDeleteModal({
+      isOpen: false,
+      coinId: null,
+      coinName: '',
+      isLoading: false,
+    });
+  }, []);
 
   const handleCancelForm = useCallback(() => {
     setIsClosing(true);
@@ -316,7 +354,7 @@ const Portfolio: React.FC = () => {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDeleteHolding(holding.coinId)}
+                        onClick={() => handleDeleteHolding(holding.coinId, holding.coinName)}
                         className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,6 +458,18 @@ const Portfolio: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        title="Delete Holding"
+        message={`Are you sure you want to remove your ${deleteModal.coinName} holding? This action cannot be undone.`}
+        confirmText="Delete Holding"
+        cancelText="Cancel"
+        isLoading={deleteModal.isLoading}
+      />
     </div>
   );
 };
