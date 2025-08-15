@@ -20,13 +20,17 @@ export interface UIState {
 
 const loadPersistedState = (): Partial<UIState> => {
   try {
+    if (typeof window === 'undefined') {
+      return {};
+    }
+    
     const persistedFilters = localStorage.getItem('crypto-dashboard-filters');
     const persistedTheme = localStorage.getItem('crypto-dashboard-theme');
     const persistedSort = localStorage.getItem('crypto-dashboard-sort');
 
     return {
       filters: persistedFilters ? JSON.parse(persistedFilters) : undefined,
-      theme: persistedTheme as 'light' | 'dark' || undefined,
+      theme: (persistedTheme === 'light' || persistedTheme === 'dark') ? persistedTheme : undefined,
       sortConfig: persistedSort ? JSON.parse(persistedSort) : undefined,
     };
   } catch (error) {
@@ -37,22 +41,23 @@ const loadPersistedState = (): Partial<UIState> => {
 
 const saveToLocalStorage = (key: string, value: any) => {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
   } catch (error) {
     console.warn(`Failed to save ${key} to localStorage:`, error);
   }
 };
 
-const persistedState = loadPersistedState();
-
+// Initialize with default values, load persisted state when needed
 const initialState: UIState = {
   searchQuery: '',
-  filters: persistedState.filters || {
+  filters: {
     marketCapFilter: 'all',
     priceChangeFilter: 'all',
   },
-  theme: persistedState.theme || 'light',
-  sortConfig: persistedState.sortConfig || {
+  theme: 'light',
+  sortConfig: {
     key: 'market_cap_rank',
     direction: 'asc',
   },
@@ -88,12 +93,19 @@ const uiSlice = createSlice({
       saveToLocalStorage('crypto-dashboard-filters', state.filters);
     },
     toggleTheme: (state) => {
+      console.log('toggleTheme reducer called - current theme:', state.theme);
       state.theme = state.theme === 'light' ? 'dark' : 'light';
-      saveToLocalStorage('crypto-dashboard-theme', state.theme);
+      console.log('toggleTheme reducer - new theme:', state.theme);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('crypto-dashboard-theme', state.theme);
+        console.log('toggleTheme reducer - saved to localStorage:', state.theme);
+      }
     },
     setTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
       state.theme = action.payload;
-      saveToLocalStorage('crypto-dashboard-theme', state.theme);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('crypto-dashboard-theme', state.theme);
+      }
     },
     setSortConfig: (state, action: PayloadAction<SortConfig>) => {
       state.sortConfig = action.payload;
@@ -122,8 +134,11 @@ const uiSlice = createSlice({
         key: 'market_cap_rank',
         direction: 'asc',
       };
-      localStorage.removeItem('crypto-dashboard-filters');
-      localStorage.removeItem('crypto-dashboard-sort');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('crypto-dashboard-filters');
+        localStorage.removeItem('crypto-dashboard-sort');
+        localStorage.removeItem('crypto-dashboard-theme');
+      }
     },
   },
 });

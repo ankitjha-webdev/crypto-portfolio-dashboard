@@ -96,7 +96,7 @@ describe('Integration Tests', () => {
     });
 
     // Find and click theme toggle
-    const themeToggle = screen.getByRole('button', { name: /toggle theme/i });
+    const themeToggle = screen.getByRole('button', { name: /switch to dark mode/i });
     await user.click(themeToggle);
 
     // Verify theme class is applied (this would be checked in the DOM)

@@ -7,6 +7,10 @@ export const useThemeInitialization = () => {
 
   useEffect(() => {
     const initializeTheme = () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      
       const savedTheme = localStorage.getItem('crypto-dashboard-theme');
       
       if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
@@ -25,6 +29,10 @@ export const useThemeInitialization = () => {
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      
       const savedTheme = localStorage.getItem('crypto-dashboard-theme');
       if (!savedTheme) {
         const theme = e.matches ? 'dark' : 'light';

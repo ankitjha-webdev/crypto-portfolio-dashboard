@@ -142,6 +142,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = memo(({
           {theme}
         </span>
       )}
+      
     </div>
   );
 });
