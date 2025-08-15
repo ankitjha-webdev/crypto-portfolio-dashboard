@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 
-:root {
+ @custom-variant dark (&:where(.dark, .dark *));
+
+/* :root {
   color-scheme: light dark;
-}
+} */
 
 body {
   font-feature-settings:
@@ -84,10 +86,4 @@ body {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-}
-
-.theme-switching *,
-.theme-switching *::before,
-.theme-switching *::after {
-  transition: none !important;
 }
