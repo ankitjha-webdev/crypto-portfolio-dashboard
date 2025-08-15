@@ -1,7 +1,7 @@
 import React, { memo, useEffect } from 'react';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
-import { toggleTheme, setTheme } from '../../store/slices/uiSlice';
+import { toggleTheme } from '../../store/slices/uiSlice';
 
 interface ThemeToggleProps {
   className?: string;

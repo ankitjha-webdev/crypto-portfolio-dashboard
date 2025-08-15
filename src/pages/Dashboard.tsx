@@ -37,7 +37,7 @@ const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <LoadingSpinner
           size="lg"
-          text="Loading cryptocurrency data..."
+          text="Loading..."
           centered
           className="min-h-[400px]"
         />
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
 
         <div className="flex flex-col xs:flex-row xs:items-center gap-3 xs:gap-4">
           <div className="text-xs xs:text-sm text-gray-500 dark:text-gray-400 order-2 xs:order-1">
-            <span className="hidden xs:inline">Last updated: </span>
+            <span className="inline">Last updated: </span>
             <span className="font-medium">{formattedLastUpdated}</span>
           </div>
           <button
@@ -87,15 +87,15 @@ const Dashboard: React.FC = () => {
             {loading ? (
               <>
                 <LoadingSpinner size="sm" color="white" />
-                <span className="hidden xs:inline">Refreshing...</span>
-                <span className="xs:hidden">Loading</span>
+                <span className="inline">Refreshing...</span>
+                {/* <span className="xs:hidden">Loading</span> */}
               </>
             ) : (
               <>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="hidden xs:inline">Refresh</span>
+                <span className="inline">Refresh</span>
               </>
             )}
           </button>

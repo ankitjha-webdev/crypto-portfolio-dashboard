@@ -183,8 +183,8 @@ const Portfolio: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
             My Portfolio
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Track cryptocurrency prices and market trends
+          <p className="hidden sm:block mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Monitor your assets and track portfolio performance
           </p>
         </div>
         <button
