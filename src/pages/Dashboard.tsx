@@ -103,7 +103,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Error Alert */}
-      {error && (
+      {error && coins.length > 0 && (
         <div className="mb-6 animate-fade-in">
           <ErrorDisplay
             error={error}

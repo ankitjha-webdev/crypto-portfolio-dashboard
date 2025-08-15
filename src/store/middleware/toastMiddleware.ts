@@ -58,7 +58,7 @@ export const toastMiddleware: Middleware = (store) => (next) => (action: any) =>
   if (action.type?.endsWith('/rejected')) {
     const errorPayload = action.payload as any;
     
-    if (errorPayload?.isSilent) {
+    if (errorPayload?.isSilent || errorPayload?.isNetworkError) {
       return result;
     }
 

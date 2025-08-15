@@ -66,7 +66,7 @@ export const fetchCoins = createAsyncThunk(
         userMessage = 'Rate limit exceeded. Please wait a moment before refreshing.';
       } else if (apiError.code === 503 || apiError.code === 502) {
         userMessage = 'CoinGecko service is temporarily unavailable. Please try again later.';
-      } else if (apiError.message?.includes('fetch')) {
+      } else if (apiError.message?.includes('fetch') || apiError.message?.includes('network')) {
         userMessage = 'Network connection error. Please check your internet connection.';
       } else if (apiError.code === 404) {
         userMessage = 'Cryptocurrency data not found.';
@@ -79,6 +79,7 @@ export const fetchCoins = createAsyncThunk(
         timestamp: apiError.timestamp,
         retryAfter: apiError.retryAfter,
         canRetry: [429, 503, 502, 500].includes(apiError.code as number) || apiError.message?.includes('fetch'),
+        isNetworkError: apiError.message?.includes('fetch') || apiError.message?.includes('network'),
       });
     }
   }
@@ -99,7 +100,7 @@ export const refreshPrices = createAsyncThunk(
         userMessage = 'Rate limit reached. Price updates paused temporarily.';
       } else if (apiError.code === 503 || apiError.code === 502) {
         userMessage = 'Service temporarily unavailable. Using cached prices.';
-      } else if (apiError.message?.includes('fetch')) {
+      } else if (apiError.message?.includes('fetch') || apiError.message?.includes('network')) {
         userMessage = 'Connection issue. Price updates will resume automatically.';
       }
       
@@ -111,6 +112,7 @@ export const refreshPrices = createAsyncThunk(
         retryAfter: apiError.retryAfter,
         canRetry: true,
         isSilent: true, // Don't show toast for refresh failures
+        isNetworkError: apiError.message?.includes('fetch') || apiError.message?.includes('network'),
       });
     }
   }
@@ -124,11 +126,24 @@ export const fetchCoinDetails = createAsyncThunk(
       return data;
     } catch (error) {
       const apiError = error as ApiError;
+      let userMessage = 'Failed to fetch coin details';
+      
+      if (apiError.code === 429) {
+        userMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
+      } else if (apiError.code === 503 || apiError.code === 502) {
+        userMessage = 'Service temporarily unavailable. Please try again later.';
+      } else if (apiError.message?.includes('fetch') || apiError.message?.includes('network')) {
+        userMessage = 'Network connection error. Please check your internet connection.';
+      }
+      
       return rejectWithValue({
-        message: apiError.message,
+        message: userMessage,
+        originalMessage: apiError.message,
         code: apiError.code,
         timestamp: apiError.timestamp,
         retryAfter: apiError.retryAfter,
+        canRetry: [429, 503, 502, 500].includes(apiError.code as number) || apiError.message?.includes('fetch'),
+        isNetworkError: apiError.message?.includes('fetch') || apiError.message?.includes('network'),
       });
     }
   }
@@ -149,7 +164,7 @@ export const searchCoins = createAsyncThunk(
         userMessage = 'Too many search requests. Please wait a moment.';
       } else if (apiError.code === 503 || apiError.code === 502) {
         userMessage = 'Search service temporarily unavailable.';
-      } else if (apiError.message?.includes('fetch')) {
+      } else if (apiError.message?.includes('fetch') || apiError.message?.includes('network')) {
         userMessage = 'Network error during search. Please try again.';
       } else if (query.length < 2) {
         userMessage = 'Please enter at least 2 characters to search.';

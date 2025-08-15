@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../components/common/ToastContainer';
 
+interface UseNetworkStatusOptions {
+  showToastNotifications?: boolean;
+}
+
 interface NetworkStatus {
   isOnline: boolean;
   isSlowConnection: boolean;
   connectionType: string;
 }
 
-export const useNetworkStatus = () => {
+export const useNetworkStatus = (options: UseNetworkStatusOptions = {}) => {
+  const { showToastNotifications = false } = options;
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({
     isOnline: navigator.onLine,
     isSlowConnection: false,
@@ -29,12 +34,16 @@ export const useNetworkStatus = () => {
 
     const handleOnline = () => {
       updateNetworkStatus();
-      showInfo('Connection Restored', 'You are back online. Data will be refreshed automatically.');
+      if (showToastNotifications) {
+        showInfo('Connection Restored', 'You are back online. Data will be refreshed automatically.');
+      }
     };
 
     const handleOffline = () => {
       updateNetworkStatus();
-      showWarning('Connection Lost', 'You are offline. Some features may not work properly.');
+      if (showToastNotifications) {
+        showWarning('Connection Lost', 'You are offline. Some features may not work properly.');
+      }
     };
 
     const handleConnectionChange = () => {

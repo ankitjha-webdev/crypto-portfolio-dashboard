@@ -16,7 +16,7 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 
 function AppContent() {
   useThemeInitialization();
-  const networkStatus = useNetworkStatus();
+  const networkStatus = useNetworkStatus({ showToastNotifications: false });
 
   useEffect(() => {
     document.body.className = 'bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors';

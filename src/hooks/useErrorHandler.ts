@@ -49,6 +49,7 @@ export const useErrorHandler = () => {
       } else if (apiError.message?.includes('network') || apiError.message?.includes('fetch')) {
         errorTitle = 'Connection Error';
         isWarning = true;
+        (apiError as any).isNetworkError = true;
       }
     }
 
