@@ -1,10 +1,11 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { useAppSelector } from '../../hooks/useAppSelector';
 import { useAppDispatch } from '../../hooks/useAppDispatch';
 import { selectAllCoins, selectCryptoLoading, selectCryptoRefreshing } from '../../store/slices/cryptoSlice';
 import { toggleSort } from '../../store/slices/uiSlice';
 import { formatCurrency, formatPercentage, formatLargeNumber } from '../../utils/formatters';
 import { SkeletonCryptoTable } from '../common';
+import ChartModal from '../charts/ChartModal';
 
 interface CryptoTableProps {
     filteredCoins?: any[];
@@ -16,12 +17,42 @@ const CryptoTable: React.FC<CryptoTableProps> = memo(({ filteredCoins }) => {
     const loading = useAppSelector(selectCryptoLoading);
     const refreshing = useAppSelector(selectCryptoRefreshing);
     const sortConfig = useAppSelector(state => state.ui.sortConfig);
+    
+    const [chartModal, setChartModal] = useState<{
+        isOpen: boolean;
+        coinId: string;
+        coinName: string;
+        coinSymbol: string;
+    }>({
+        isOpen: false,
+        coinId: '',
+        coinName: '',
+        coinSymbol: '',
+    });
 
     const coins = filteredCoins || allCoins;
 
     const handleSort = useCallback((key: string) => {
         dispatch(toggleSort(key));
     }, [dispatch]);
+
+    const handleOpenChart = useCallback((coin: any) => {
+        setChartModal({
+            isOpen: true,
+            coinId: coin.id,
+            coinName: coin.name,
+            coinSymbol: coin.symbol,
+        });
+    }, []);
+
+    const handleCloseChart = useCallback(() => {
+        setChartModal({
+            isOpen: false,
+            coinId: '',
+            coinName: '',
+            coinSymbol: '',
+        });
+    }, []);
 
     const getSortIcon = useCallback((key: string) => {
         if (sortConfig.key !== key) {
@@ -100,6 +131,9 @@ const CryptoTable: React.FC<CryptoTableProps> = memo(({ filteredCoins }) => {
                         {getSortIcon('market_cap')}
                     </button>
                 </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                </th>
             </tr>
         </thead>
     );
@@ -162,6 +196,17 @@ const CryptoTable: React.FC<CryptoTableProps> = memo(({ filteredCoins }) => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right font-medium">
                     {formatLargeNumber(coin.market_cap)}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <button
+                        onClick={() => handleOpenChart(coin)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                        title="View Price Chart"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                    </button>
+                </td>
             </tr>
         );
     }, []);
@@ -187,6 +232,7 @@ const CryptoTable: React.FC<CryptoTableProps> = memo(({ filteredCoins }) => {
     }
 
     return (
+        <>
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
             {refreshing && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 sm:px-6 py-3">
@@ -275,6 +321,17 @@ const CryptoTable: React.FC<CryptoTableProps> = memo(({ filteredCoins }) => {
                                     </p>
                                 </div>
                             </div>
+                            <div className="mt-3 flex justify-end">
+                                <button
+                                    onClick={() => handleOpenChart(coin)}
+                                    className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 transition-colors"
+                                >
+                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    View Chart
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -289,6 +346,16 @@ const CryptoTable: React.FC<CryptoTableProps> = memo(({ filteredCoins }) => {
                 </div>
             </div>
         </div>
+        
+        {/* Chart Modal */}
+        <ChartModal
+            isOpen={chartModal.isOpen}
+            onClose={handleCloseChart}
+            coinId={chartModal.coinId}
+            coinName={chartModal.coinName}
+            coinSymbol={chartModal.coinSymbol}
+        />
+        </>
     );
 });
 

@@ -229,6 +229,31 @@ class CoinGeckoService {
         }
     }
 
+    public async fetchHistoricalData(coinId: string, days: number): Promise<any> {
+        try {
+            const endpoint = `/coins/${coinId}/market_chart?vs_currency=usd&days=${days}&interval=${this.getInterval(days)}`;
+            const data = await this.makeRequest(endpoint);
+
+            return this.normalizeHistoricalData(data);
+        } catch (error) {
+            throw this.createApiError(error, `Failed to fetch historical data for ${coinId}`);
+        }
+    }
+
+    private getInterval(days: number): string {
+        if (days <= 1) return 'hourly';
+        if (days <= 90) return 'daily';
+        return 'daily';
+    }
+
+    private normalizeHistoricalData(data: any): { prices: Array<[number, number]>; market_caps: Array<[number, number]>; total_volumes: Array<[number, number]> } {
+        return {
+            prices: data.prices || [],
+            market_caps: data.market_caps || [],
+            total_volumes: data.total_volumes || []
+        };
+    }
+
     private normalizeCoinData(coins: any[]): CoinData[] {
         return coins.map(coin => ({
             id: coin.id,

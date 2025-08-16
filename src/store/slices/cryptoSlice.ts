@@ -21,6 +21,20 @@ export interface SearchResult {
   market_cap_rank: number;
 }
 
+export interface ChartDataPoint {
+  timestamp: number;
+  price: number;
+  market_cap?: number;
+  volume?: number;
+}
+
+export interface ChartData {
+  coinId: string;
+  timeframe: string;
+  data: ChartDataPoint[];
+  lastUpdated: number;
+}
+
 export interface CryptoState {
   coins: Record<string, CoinData>; // Normalized by coin ID
   coinIds: string[]; // For maintaining order
@@ -34,6 +48,8 @@ export interface CryptoState {
     remaining: number;
     resetTime: number;
   };
+  chartData: Record<string, ChartData>; // Key format: `${coinId}-${timeframe}`
+  chartLoading: Record<string, boolean>; // Track loading state per chart
 }
 
 const initialState: CryptoState = {
@@ -49,6 +65,8 @@ const initialState: CryptoState = {
     remaining: 10,
     resetTime: Date.now() + 60000,
   },
+  chartData: {},
+  chartLoading: {},
 };
 
 export const fetchCoins = createAsyncThunk(
@@ -182,6 +200,44 @@ export const searchCoins = createAsyncThunk(
   }
 );
 
+export const fetchHistoricalData = createAsyncThunk(
+  'crypto/fetchHistoricalData',
+  async ({ coinId, timeframe }: { coinId: string; timeframe: string }, { rejectWithValue }) => {
+    try {
+      const days = getTimeframeDays(timeframe);
+      const data = await coinGeckoApi.fetchHistoricalData(coinId, days);
+      
+      return {
+        coinId,
+        timeframe,
+        data: transformHistoricalData(data),
+      };
+    } catch (error) {
+      const apiError = error as ApiError;
+      
+      let userMessage = 'Failed to fetch chart data';
+      
+      if (apiError.code === 429) {
+        userMessage = 'Rate limit exceeded. Please wait before loading charts.';
+      } else if (apiError.code === 503 || apiError.code === 502) {
+        userMessage = 'Chart service temporarily unavailable.';
+      } else if (apiError.message?.includes('fetch') || apiError.message?.includes('network')) {
+        userMessage = 'Network error loading chart. Please try again.';
+      }
+      
+      return rejectWithValue({
+        message: userMessage,
+        originalMessage: apiError.message,
+        code: apiError.code,
+        timestamp: apiError.timestamp,
+        coinId,
+        timeframe,
+        canRetry: [429, 503, 502, 500].includes(apiError.code as number) || apiError.message?.includes('fetch'),
+      });
+    }
+  }
+);
+
 const normalizeCoins = (coins: CoinData[]) => {
   const normalized: Record<string, CoinData> = {};
   const ids: string[] = [];
@@ -192,6 +248,28 @@ const normalizeCoins = (coins: CoinData[]) => {
   });
   
   return { normalized, ids };
+};
+
+const getTimeframeDays = (timeframe: string): number => {
+  switch (timeframe) {
+    case '24h': return 1;
+    case '7d': return 7;
+    case '30d': return 30;
+    case '90d': return 90;
+    case '1y': return 365;
+    default: return 7;
+  }
+};
+
+const transformHistoricalData = (data: any): ChartDataPoint[] => {
+  const { prices, market_caps, total_volumes } = data;
+  
+  return prices.map((pricePoint: [number, number], index: number) => ({
+    timestamp: pricePoint[0],
+    price: pricePoint[1],
+    market_cap: market_caps?.[index]?.[1],
+    volume: total_volumes?.[index]?.[1],
+  }));
 };
 
 const cryptoSlice = createSlice({
@@ -216,6 +294,22 @@ const cryptoSlice = createSlice({
     },
     retryLastFailedAction: (state) => {
       state.error = null;
+    },
+    clearChartData: (state, action: PayloadAction<{ coinId: string; timeframe?: string }>) => {
+      const { coinId, timeframe } = action.payload;
+      if (timeframe) {
+        const key = `${coinId}-${timeframe}`;
+        delete state.chartData[key];
+        delete state.chartLoading[key];
+      } else {
+        // Clear all chart data for the coin
+        Object.keys(state.chartData).forEach(key => {
+          if (key.startsWith(`${coinId}-`)) {
+            delete state.chartData[key];
+            delete state.chartLoading[key];
+          }
+        });
+      }
     },
   },
   extraReducers: (builder) => {
@@ -328,11 +422,46 @@ const cryptoSlice = createSlice({
           timestamp: errorPayload?.timestamp,
           isSearchError: true,
         } as any;
+      })
+      // fetchHistoricalData cases
+      .addCase(fetchHistoricalData.pending, (state, action) => {
+        const { coinId, timeframe } = action.meta.arg;
+        const key = `${coinId}-${timeframe}`;
+        state.chartLoading[key] = true;
+        state.error = null;
+      })
+      .addCase(fetchHistoricalData.fulfilled, (state, action) => {
+        const { coinId, timeframe, data } = action.payload;
+        const key = `${coinId}-${timeframe}`;
+        
+        state.chartLoading[key] = false;
+        state.chartData[key] = {
+          coinId,
+          timeframe,
+          data,
+          lastUpdated: Date.now(),
+        };
+      })
+      .addCase(fetchHistoricalData.rejected, (state, action) => {
+        const errorPayload = action.payload as any;
+        const { coinId, timeframe } = errorPayload || action.meta.arg;
+        const key = `${coinId}-${timeframe}`;
+        
+        state.chartLoading[key] = false;
+        state.error = {
+          message: errorPayload?.message || 'Failed to fetch chart data',
+          code: errorPayload?.code,
+          canRetry: errorPayload?.canRetry,
+          timestamp: errorPayload?.timestamp,
+          isChartError: true,
+          coinId,
+          timeframe,
+        } as any;
       });
   },
 });
 
-export const { clearError, updateCoinPrice, clearSearchResults, updateRateLimitStatus, retryLastFailedAction } = cryptoSlice.actions;
+export const { clearError, updateCoinPrice, clearSearchResults, updateRateLimitStatus, retryLastFailedAction, clearChartData } = cryptoSlice.actions;
 
 export const selectAllCoins = createSelector(
   [(state: { crypto: CryptoState }) => state.crypto.coins, (state: { crypto: CryptoState }) => state.crypto.coinIds],
@@ -365,6 +494,19 @@ export const selectRateLimitStatus = (state: { crypto: CryptoState }) =>
 
 export const selectCoinIds = (state: { crypto: CryptoState }) => 
   state.crypto.coinIds;
+
+export const selectChartData = (state: { crypto: CryptoState }, coinId: string, timeframe: string) => {
+  const key = `${coinId}-${timeframe}`;
+  return state.crypto.chartData[key];
+};
+
+export const selectChartLoading = (state: { crypto: CryptoState }, coinId: string, timeframe: string) => {
+  const key = `${coinId}-${timeframe}`;
+  return state.crypto.chartLoading[key] || false;
+};
+
+export const selectAllChartData = (state: { crypto: CryptoState }) => 
+  state.crypto.chartData;
 
 export const selectFilteredCoins = createSelector(
   [

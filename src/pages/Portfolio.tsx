@@ -12,6 +12,8 @@ import {
 import { fetchCoins, selectAllCoins, selectCryptoLoading, selectCryptoError } from '../store/slices/cryptoSlice';
 import { ErrorBoundary, ErrorDisplay, LoadingSpinner, DeleteModal } from '../components/common';
 import { useToast } from '../components/common/ToastContainer';
+import PriceChart from '../components/charts/PriceChart';
+import PortfolioChart from '../components/charts/PortfolioChart';
 
 interface HoldingFormData {
   coinId: string;
@@ -280,6 +282,83 @@ const Portfolio: React.FC = () => {
           </div>
         </div>
       </ErrorBoundary>
+
+      {/* Portfolio Performance Chart */}
+      {portfolioSummary.hasHoldings && (
+        <ErrorBoundary fallback={
+          <div className="mb-8">
+            <ErrorDisplay
+              error="Failed to load portfolio performance chart"
+              size="medium"
+            />
+          </div>
+        }>
+          <div className="mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <PortfolioChart 
+                height={400}
+                showTimeframeSelector={true}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </ErrorBoundary>
+      )}
+
+      {/* Individual Holdings Charts */}
+      {portfolioSummary.hasHoldings && portfolio.holdings.length > 0 && (
+        <ErrorBoundary fallback={
+          <div className="mb-8">
+            <ErrorDisplay
+              error="Failed to load individual holdings charts"
+              size="medium"
+            />
+          </div>
+        }>
+          <div className="mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Individual Holdings Performance
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {portfolio.holdings.slice(0, 4).map((holding) => (
+                  <div key={holding.coinId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <img src={holding.coinImage} alt={holding.coinName} className="w-6 h-6 mr-2" />
+                        <h3 className="font-medium text-gray-900 dark:text-white">
+                          {holding.coinName} ({holding.coinSymbol.toUpperCase()})
+                        </h3>
+                      </div>
+                      <div className="text-right text-sm">
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {formatCurrency(holding.currentValue)}
+                        </p>
+                        <p className={`${holding.changePercentage24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                          {formatPercentage(holding.changePercentage24h)}
+                        </p>
+                      </div>
+                    </div>
+                    <PriceChart 
+                      coinId={holding.coinId} 
+                      height={200}
+                      showTimeframeSelector={false}
+                      className="w-full"
+                    />
+                  </div>
+                ))}
+              </div>
+              {portfolio.holdings.length > 4 && (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Showing top 4 holdings. Total holdings: {portfolio.holdings.length}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </ErrorBoundary>
+      )}
 
       {/* Holdings List */}
       <ErrorBoundary fallback={
